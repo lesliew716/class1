@@ -33,6 +33,26 @@
       height: 100%;
       object-fit: cover;
       z-index: 0;
+      transition: opacity 1s ease;
+    }
+
+    #background.transparent-spin {
+      opacity: 0.25;
+      animation: spinBg 20s linear infinite;
+      transform-origin: center center;
+      top: -25%;
+      left: -25%;
+      width: 150%;
+      height: 150%;
+    }
+
+    @keyframes spinBg {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
     }
 
     .sprite {
@@ -318,8 +338,8 @@
         els.diatomGuyWithHat.style.display = 'none';
         els.door.style.display = 'none';
 
-        // Remove background
-        els.background.style.display = 'none';
+        // Make background transparent and rotate
+        els.background.classList.add('transparent-spin');
 
         // Show Scene 2 elements
         document.body.style.background = 'transparent';
