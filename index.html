@@ -130,7 +130,7 @@
     }
 
     #car-with-driver.driving {
-      animation: driveOff 2s ease-in forwards;
+      animation: driveOff 3s linear infinite;
     }
 
     @keyframes bob {
@@ -157,11 +157,9 @@
     @keyframes driveOff {
       0% {
         transform: translateX(-50%);
-        opacity: 1;
       }
       100% {
         transform: translateX(120vw);
-        opacity: 1;
       }
     }
 
@@ -324,7 +322,7 @@
         els.background.style.display = 'none';
 
         // Show Scene 2 elements
-        document.body.style.background = '#87CEEB';
+        document.body.style.background = 'transparent';
         els.house.style.display = 'block';
         els.diatomGuyAtHouse.style.display = 'block';
         els.diatomGuyAtHouse.style.left = '18%';
