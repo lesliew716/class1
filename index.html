@@ -37,20 +37,37 @@
     }
 
     #background.transparent-spin {
-      opacity: 0.25;
-      animation: spinBg 20s linear infinite;
-      transform-origin: center center;
-      top: -25%;
-      left: -25%;
-      width: 150%;
-      height: 150%;
+      opacity: 0.2;
+      width: 60%;
+      height: auto;
+      object-fit: contain;
+      animation: moveRotate 12s ease-in-out infinite;
     }
 
-    @keyframes spinBg {
+    @keyframes moveRotate {
       0% {
+        top: 5%;
+        left: 5%;
         transform: rotate(0deg);
       }
+      25% {
+        top: 10%;
+        left: 60%;
+        transform: rotate(90deg);
+      }
+      50% {
+        top: 50%;
+        left: 30%;
+        transform: rotate(180deg);
+      }
+      75% {
+        top: 20%;
+        left: 0%;
+        transform: rotate(270deg);
+      }
       100% {
+        top: 5%;
+        left: 5%;
         transform: rotate(360deg);
       }
     }
