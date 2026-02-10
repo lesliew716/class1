@@ -36,11 +36,12 @@
       transition: opacity 1s ease;
     }
 
-    #background.transparent-spin {
-      opacity: 0.2;
-      width: 60%;
+    #transparent-bg {
+      display: none;
+      width: 50%;
       height: auto;
-      object-fit: contain;
+      z-index: 0;
+      opacity: 0.5;
       animation: moveRotate 12s ease-in-out infinite;
     }
 
@@ -52,16 +53,16 @@
       }
       25% {
         top: 10%;
-        left: 60%;
+        left: 55%;
         transform: rotate(90deg);
       }
       50% {
-        top: 50%;
+        top: 40%;
         left: 30%;
         transform: rotate(180deg);
       }
       75% {
-        top: 20%;
+        top: 15%;
         left: 0%;
         transform: rotate(270deg);
       }
@@ -231,6 +232,7 @@
     <img id="door" class="sprite" src="assets/door.png" alt="door">
 
     <!-- Scene 2 -->
+    <img id="transparent-bg" class="sprite" src="assets/transparent.jpg" alt="transparent overlay">
     <img id="house" class="sprite" src="assets/house.png" alt="house">
     <img id="diatom-guy-at-house" class="sprite" src="assets/diatom-guy-with-hat.png" alt="diatom guy at house">
     <img id="car" class="sprite" src="assets/car.png" alt="car">
@@ -242,6 +244,7 @@
 
     const els = {
       background: $('background'),
+      transparentBg: $('transparent-bg'),
       fadeOverlay: $('fade-overlay'),
       diatomGuy: $('diatom-guy'),
       hat: $('hat'),
@@ -355,11 +358,11 @@
         els.diatomGuyWithHat.style.display = 'none';
         els.door.style.display = 'none';
 
-        // Make background transparent and rotate
-        els.background.classList.add('transparent-spin');
+        // Hide inside-scene2 background, show transparent.jpg moving and rotating
+        els.background.style.display = 'none';
+        els.transparentBg.style.display = 'block';
 
         // Show Scene 2 elements
-        document.body.style.background = 'transparent';
         els.house.style.display = 'block';
         els.diatomGuyAtHouse.style.display = 'block';
         els.diatomGuyAtHouse.style.left = '18%';
