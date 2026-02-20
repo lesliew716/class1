@@ -1,152 +1,1099 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rain Sequencer</title>
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rain Sequencer</title>
+<style>
+/* ══════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e14; --surface:#111722; --surface2:#1a2234;
+  --border:#2a3a55; --accent:#4fc3f7; --accent2:#7c4dff;
+  --text:#cdd6e8; --text-dim:#5a6a8a;
+  --col-metal:#90a4ae; --col-glass:#80deea;
+  --col-wood:#a1887f; --col-lotus:#81c784; --col-stone:#78909c;
+  --seq-inactive:#1a2234; --seq-active:#4fc3f7;
+  --font:'Courier New',Courier,monospace; --r:4px; --pad:12px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
+  font-family:var(--font);color:var(--text);user-select:none}
 
-  <!-- Import map: resolve bare specifiers to CDN URLs.
-       Must appear before any type="module" scripts. -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.165/build/three.module.js",
-      "tone":  "https://cdn.jsdelivr.net/npm/tone@15/+esm"
-    }
-  }
-  </script>
+/* Canvas */
+#three-canvas{position:fixed;inset:0;display:block;cursor:crosshair}
+
+/* HUD */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+
+/* Top bar */
+#top-bar{pointer-events:all;position:absolute;top:0;left:0;right:0;height:48px;
+  background:rgba(10,14,20,.9);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:24px;backdrop-filter:blur(6px)}
+#logo{font-size:13px;letter-spacing:3px;color:var(--accent);font-weight:bold;min-width:160px}
+#controls-center{display:flex;gap:24px;flex:1;justify-content:center}
+#controls-center label{display:flex;align-items:center;gap:8px;font-size:11px;
+  letter-spacing:1px;color:var(--text-dim)}
+#controls-center input[type=range]{-webkit-appearance:none;width:100px;height:3px;
+  background:var(--border);border-radius:2px;outline:none}
+#controls-center input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+  width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer}
+#controls-center span{color:var(--accent);min-width:28px;text-align:right}
+#controls-right{display:flex;align-items:center;gap:12px;min-width:200px;justify-content:flex-end}
+button{font-family:var(--font);background:transparent;border:1px solid var(--border);
+  color:var(--text);padding:5px 12px;font-size:11px;letter-spacing:1px;
+  border-radius:var(--r);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+button:hover{background:var(--surface2);border-color:var(--accent);color:var(--accent)}
+#btn-play{border-color:var(--accent);color:var(--accent)}
+#btn-play.playing{background:var(--accent);color:var(--bg)}
+#score-box{font-size:11px;letter-spacing:2px;color:var(--text-dim)}
+#score-value{color:var(--accent2)}
+
+/* Palette */
+#palette{pointer-events:all;position:absolute;top:48px;left:0;bottom:160px;width:110px;
+  background:rgba(10,14,20,.9);border-right:1px solid var(--border);
+  padding:var(--pad) 8px;display:flex;flex-direction:column;gap:6px;
+  overflow-y:auto;backdrop-filter:blur(6px)}
+.pal-title{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-top:4px}
+.pal-div{height:1px;background:var(--border);margin:6px 0}
+.mat-btn{border:1px solid var(--border);border-radius:var(--r);padding:8px 6px;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:border-color .15s,background .15s}
+.mat-btn:hover{border-color:var(--accent);background:var(--surface2)}
+.mat-btn.sel{border-color:var(--accent);background:var(--surface2)}
+.mat-btn.locked{opacity:.4;cursor:not-allowed;pointer-events:none}
+.mat-icon{width:32px;height:32px;border-radius:3px}
+.ic-metal{background:linear-gradient(135deg,#607d8b,#90a4ae)}
+.ic-glass{background:linear-gradient(135deg,#26c6da,#80deea);opacity:.7}
+.ic-wood{background:linear-gradient(135deg,#795548,#a1887f)}
+.ic-lotus{background:linear-gradient(135deg,#388e3c,#81c784)}
+.ic-stone{background:linear-gradient(135deg,#546e7a,#78909c)}
+.mat-label{font-size:9px;letter-spacing:2px;color:var(--text)}
+.mat-hint{font-size:8px;color:var(--text-dim);text-align:center}
+#palette select{font-family:var(--font);font-size:9px;background:var(--surface2);
+  border:1px solid var(--border);color:var(--text);padding:4px 6px;
+  border-radius:var(--r);width:100%;cursor:pointer}
+
+/* Sequencer panel */
+#seq-panel{pointer-events:all;position:absolute;bottom:0;left:0;right:0;height:156px;
+  background:rgba(10,14,20,.94);border-top:1px solid var(--border);
+  padding:10px 16px 10px 120px;backdrop-filter:blur(6px)}
+#seq-header{display:flex;justify-content:space-between;font-size:9px;
+  letter-spacing:2px;color:var(--text-dim);margin-bottom:8px}
+#loop-indicator{color:var(--accent2)}
+#seq-grid{display:flex;flex-direction:column;gap:4px}
+.seq-row{display:flex;align-items:center;gap:3px}
+.seq-lbl{font-size:8px;letter-spacing:1px;width:48px;color:var(--text-dim);flex-shrink:0}
+.seq-cell{width:28px;height:24px;border-radius:2px;background:var(--seq-inactive);
+  border:1px solid var(--border);cursor:pointer;flex-shrink:0;transition:background .08s}
+.seq-cell.on{background:var(--seq-active);border-color:var(--accent)}
+.seq-cell.now{background:#fff!important}
+.seq-cell.beat{border-color:#2a3a65}
+#playhead-bar{position:relative;height:3px;background:var(--border);
+  margin-top:6px;border-radius:2px}
+#playhead{position:absolute;top:0;left:0;width:0%;height:100%;
+  background:var(--accent2);border-radius:2px}
+
+/* Info panel */
+#info-panel{pointer-events:all;position:absolute;top:56px;right:12px;width:160px;
+  background:rgba(10,14,20,.94);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px;display:flex;flex-direction:column;
+  gap:8px;backdrop-filter:blur(6px)}
+#info-panel.hide{display:none}
+#info-title{font-size:9px;letter-spacing:2px;color:var(--text-dim)}
+#info-mat{font-size:13px;color:var(--accent)}
+#info-hits{font-size:10px;color:var(--text)}
+#btn-del{color:#ef9a9a;border-color:#4a2a2a}
+#btn-del:hover{background:#4a2a2a;color:#ef9a9a}
+
+/* Toast */
+#toast{pointer-events:none;position:absolute;bottom:172px;left:50%;
+  transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);
+  padding:8px 20px;border-radius:20px;font-size:11px;letter-spacing:1px;
+  color:var(--accent);transition:opacity .5s}
+#toast.hide{display:none}
+#toast.fade{opacity:0}
+
+/* Achievement */
+#ach-overlay{pointer-events:none;position:absolute;inset:0;display:flex;
+  align-items:center;justify-content:center;background:rgba(0,0,0,.5)}
+#ach-overlay.hide{display:none}
+#ach-box{background:var(--surface);border:2px solid var(--accent2);
+  border-radius:8px;padding:32px 48px;text-align:center;animation:pop .4s ease}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+#ach-icon{font-size:48px;margin-bottom:12px}
+#ach-title{font-size:18px;letter-spacing:3px;color:var(--accent2)}
+#ach-desc{font-size:11px;color:var(--text-dim);margin-top:6px}
+
+/* Start overlay */
+#start-overlay{pointer-events:all;position:absolute;inset:0;display:flex;
+  align-items:center;justify-content:center;background:rgba(10,14,20,.95);z-index:20}
+#start-overlay.hide{display:none}
+#start-box{text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px}
+#start-box h1{font-size:28px;letter-spacing:6px;color:var(--accent)}
+#start-box p{font-size:13px;color:var(--text-dim);line-height:1.8;letter-spacing:1px}
+.tips{list-style:none;font-size:11px;color:var(--text-dim);letter-spacing:.5px;
+  line-height:2;text-align:left;border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 20px;margin:0}
+.tips li::before{content:'› ';color:var(--accent)}
+#btn-begin{font-size:14px;letter-spacing:4px;padding:12px 36px;
+  border-color:var(--accent);color:var(--accent);margin-top:8px}
+#btn-begin:hover{background:var(--accent);color:var(--bg)}
+</style>
 </head>
 <body>
 
-  <!-- ─── HUD Overlay ─────────────────────────────────── -->
-  <div id="hud">
+<!-- ─── HUD ───────────────────────────────────────── -->
+<div id="hud">
 
-    <!-- Top bar -->
-    <div id="top-bar">
-      <div id="logo">☁ RAIN SEQUENCER</div>
-
-      <div id="controls-center">
-        <label>BPM
-          <input type="range" id="bpm-slider" min="60" max="180" value="90" />
-          <span id="bpm-display">90</span>
-        </label>
-        <label>RAIN
-          <input type="range" id="rain-slider" min="1" max="10" value="4" />
-          <span id="rain-display">4</span>
-        </label>
-      </div>
-
-      <div id="controls-right">
-        <button id="btn-play">▶ START</button>
-        <button id="btn-clear">✕ CLEAR</button>
-        <div id="score-box">SCORE <span id="score-value">0</span></div>
-      </div>
+  <div id="top-bar">
+    <div id="logo">☁ RAIN SEQUENCER</div>
+    <div id="controls-center">
+      <label>BPM
+        <input type="range" id="bpm-slider" min="60" max="180" value="90">
+        <span id="bpm-val">90</span>
+      </label>
+      <label>RAIN
+        <input type="range" id="rain-slider" min="1" max="10" value="4">
+        <span id="rain-val">4</span>
+      </label>
     </div>
-
-    <!-- Material palette (left sidebar) -->
-    <div id="palette">
-      <div class="palette-title">SURFACES</div>
-
-      <div class="mat-btn selected" data-material="metal">
-        <div class="mat-icon metal-icon"></div>
-        <div class="mat-label">METAL</div>
-        <div class="mat-hint">FM · bright</div>
-      </div>
-
-      <div class="mat-btn" data-material="glass">
-        <div class="mat-icon glass-icon"></div>
-        <div class="mat-label">GLASS</div>
-        <div class="mat-hint">Bell · airy</div>
-      </div>
-
-      <div class="mat-btn" data-material="wood">
-        <div class="mat-icon wood-icon"></div>
-        <div class="mat-label">WOOD</div>
-        <div class="mat-hint">Membrane · warm</div>
-      </div>
-
-      <div class="mat-btn locked" data-material="lotus" id="mat-lotus">
-        <div class="mat-icon lotus-icon"></div>
-        <div class="mat-label">LOTUS</div>
-        <div class="mat-hint">🔒 200 pts</div>
-      </div>
-
-      <div class="mat-btn locked" data-material="stone" id="mat-stone">
-        <div class="mat-icon stone-icon"></div>
-        <div class="mat-label">STONE</div>
-        <div class="mat-hint">🔒 500 pts</div>
-      </div>
-
-      <div class="palette-divider"></div>
-      <div class="palette-title">SCALE</div>
-      <select id="scale-select">
-        <option value="pentatonic">Pentatonic</option>
-        <option value="major">Major</option>
-        <option value="minor">Minor</option>
-        <option value="blues">Blues</option>
-      </select>
-
-      <div class="palette-divider"></div>
-      <div class="palette-title">WEATHER</div>
-      <select id="weather-select">
-        <option value="rain">Rain</option>
-        <option value="drizzle" disabled>Drizzle 🔒</option>
-        <option value="storm"   disabled>Storm 🔒</option>
-      </select>
+    <div id="controls-right">
+      <button id="btn-play">▶ START</button>
+      <button id="btn-clear">✕ CLEAR</button>
+      <div id="score-box">SCORE <span id="score-value">0</span></div>
     </div>
-
-    <!-- Sequencer grid (bottom) -->
-    <div id="sequencer-panel">
-      <div id="seq-header">
-        <span>SEQUENCER — 16 STEPS</span>
-        <span id="loop-indicator">LOOP: <span id="loop-count">0</span></span>
-      </div>
-      <div id="seq-grid"></div>
-      <div id="playhead-bar"><div id="playhead"></div></div>
-    </div>
-
-    <!-- Surface info panel (appears on selection) -->
-    <div id="surface-info" class="hidden">
-      <div id="info-title">SURFACE</div>
-      <div id="info-material"></div>
-      <div id="info-hits">Hits: <span id="info-hit-count">0</span></div>
-      <button id="btn-lock-pattern">🔒 Lock Pattern</button>
-      <button id="btn-delete-surface">✕ Delete</button>
-    </div>
-
-    <!-- Toast notification -->
-    <div id="toast" class="hidden"></div>
-
-    <!-- Achievement overlay -->
-    <div id="achievement-overlay" class="hidden">
-      <div id="achievement-box">
-        <div id="achievement-icon">🏆</div>
-        <div id="achievement-title"></div>
-        <div id="achievement-desc"></div>
-      </div>
-    </div>
-
-    <!-- Start overlay (blocks until user clicks — required for Web Audio) -->
-    <div id="start-overlay">
-      <div id="start-box">
-        <h1>☁ RAIN SEQUENCER</h1>
-        <p>Place surfaces into the rain.<br/>Let the drops compose the music.</p>
-        <ul class="start-tips">
-          <li>Click the ground to place a surface</li>
-          <li>Click a surface to select / delete it</li>
-          <li>Press ▶ START to loop your pattern</li>
-          <li>Right-click or ESC to deselect</li>
-        </ul>
-        <button id="btn-start-game">CLICK TO BEGIN</button>
-      </div>
-    </div>
-
   </div>
 
-  <!-- Three.js canvas fills the background -->
-  <canvas id="three-canvas"></canvas>
+  <div id="palette">
+    <div class="pal-title">SURFACES</div>
+    <div class="mat-btn sel" data-mat="metal"><div class="mat-icon ic-metal"></div><div class="mat-label">METAL</div><div class="mat-hint">FM · bright</div></div>
+    <div class="mat-btn" data-mat="glass"><div class="mat-icon ic-glass"></div><div class="mat-label">GLASS</div><div class="mat-hint">Bell · airy</div></div>
+    <div class="mat-btn" data-mat="wood"><div class="mat-icon ic-wood"></div><div class="mat-label">WOOD</div><div class="mat-hint">Membrane · warm</div></div>
+    <div class="mat-btn locked" data-mat="lotus" id="mat-lotus"><div class="mat-icon ic-lotus"></div><div class="mat-label">LOTUS</div><div class="mat-hint">🔒 200 pts</div></div>
+    <div class="mat-btn locked" data-mat="stone" id="mat-stone"><div class="mat-icon ic-stone"></div><div class="mat-label">STONE</div><div class="mat-hint">🔒 500 pts</div></div>
+    <div class="pal-div"></div>
+    <div class="pal-title">SCALE</div>
+    <select id="scale-sel">
+      <option value="pentatonic">Pentatonic</option>
+      <option value="major">Major</option>
+      <option value="minor">Minor</option>
+      <option value="blues">Blues</option>
+    </select>
+    <div class="pal-div"></div>
+    <div class="pal-title">WEATHER</div>
+    <select id="weather-sel">
+      <option value="rain">Rain</option>
+      <option value="drizzle" disabled>Drizzle 🔒</option>
+      <option value="storm" disabled>Storm 🔒</option>
+    </select>
+  </div>
 
-  <script type="module" src="src/Main.js"></script>
+  <div id="seq-panel">
+    <div id="seq-header">
+      <span>SEQUENCER — 16 STEPS</span>
+      <span id="loop-indicator">LOOP: <span id="loop-count">0</span></span>
+    </div>
+    <div id="seq-grid"></div>
+    <div id="playhead-bar"><div id="playhead"></div></div>
+  </div>
+
+  <div id="info-panel" class="hide">
+    <div id="info-title">SURFACE</div>
+    <div id="info-mat"></div>
+    <div id="info-hits">Hits: <span id="info-hit-n">0</span></div>
+    <button id="btn-lock">🔒 Lock Pattern</button>
+    <button id="btn-del">✕ Delete</button>
+  </div>
+
+  <div id="toast" class="hide"></div>
+
+  <div id="ach-overlay" class="hide">
+    <div id="ach-box">
+      <div id="ach-icon">🏆</div>
+      <div id="ach-title"></div>
+      <div id="ach-desc"></div>
+    </div>
+  </div>
+
+  <div id="start-overlay">
+    <div id="start-box">
+      <h1>☁ RAIN SEQUENCER</h1>
+      <p>Place surfaces into the rain.<br/>Let the drops compose the music.</p>
+      <ul class="tips">
+        <li>Click the ground to place a surface</li>
+        <li>Click a surface to select / info</li>
+        <li>Press ▶ START to loop your pattern</li>
+        <li>Right-click or ESC to deselect</li>
+        <li>Delete key removes selected surface</li>
+      </ul>
+      <button id="btn-begin">CLICK TO BEGIN</button>
+    </div>
+  </div>
+
+</div>
+<canvas id="three-canvas"></canvas>
+
+<!-- CDN: UMD builds so globals THREE and Tone are available -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.165/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.js"></script>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════
+   ALL APPLICATION CODE — self-contained, no ES modules
+   ═══════════════════════════════════════════════════════════ */
+
+// ── Constants ─────────────────────────────────────────────
+const STEPS        = 16;
+const SURFACE_Y    = 0;
+const SCENE_BOUNDS = 8;
+const MAX_SURFACES = 8;
+
+// ── Scales (semitone offsets from C4 = MIDI 60) ──────────
+const SCALES = {
+  pentatonic: [0,2,4,7,9,12,14,16,19,21],
+  major:      [0,2,4,5,7,9,11,12,14,16],
+  minor:      [0,2,3,5,7,8,10,12,14,15],
+  blues:      [0,3,5,6,7,10,12,15,17,18],
+};
+let currentScale = SCALES.pentatonic;
+
+function yToFreq(yNorm, pitchRange) {
+  const [lo, hi] = pitchRange;
+  const mapped = lo + yNorm * (hi - lo);
+  const idx = Math.round(mapped * (currentScale.length - 1));
+  const midi = 60 + currentScale[Math.max(0, Math.min(currentScale.length-1, idx))];
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+// ── Material configs ──────────────────────────────────────
+const MAT = {
+  metal: { color:0x90a4ae, emissive:0x4fc3f7, pitchRange:[0,1],     rough:0.2, metal:0.8 },
+  glass: { color:0x80deea, emissive:0x00bcd4, pitchRange:[0.5,1],   rough:0.0, metal:0.1, transparent:true },
+  wood:  { color:0xa1887f, emissive:0x795548, pitchRange:[0,0.6],   rough:0.9, metal:0.0 },
+  lotus: { color:0x81c784, emissive:0x388e3c, pitchRange:[0,0.4],   rough:0.8, metal:0.0 },
+  stone: { color:0x78909c, emissive:0x546e7a, pitchRange:[0,0.3],   rough:0.95,metal:0.0 },
+};
+
+// ── Unlock thresholds ────────────────────────────────────
+const UNLOCKS = [
+  {score:200,  type:'mat',     id:'lotus',   label:'LOTUS SURFACE',   icon:'🌿'},
+  {score:500,  type:'mat',     id:'stone',   label:'STONE SURFACE',   icon:'🪨'},
+  {score:800,  type:'scale',   id:'major',   label:'MAJOR SCALE',     icon:'🎵'},
+  {score:1200, type:'scale',   id:'blues',   label:'BLUES SCALE',     icon:'🎸'},
+  {score:1800, type:'weather', id:'drizzle', label:'DRIZZLE WEATHER', icon:'🌦'},
+  {score:2500, type:'weather', id:'storm',   label:'STORM WEATHER',   icon:'⛈'},
+];
+
+// ══════════════════════════════════════════════════════════
+// AudioEngine
+// ══════════════════════════════════════════════════════════
+class AudioEngine {
+  constructor() {
+    this.ready    = false;
+    this._synths  = {};
+    this._chans   = {};
+    this._reverb  = null;
+    this._master  = null;
+  }
+
+  async init() {
+    await Tone.start();
+
+    this._reverb = new Tone.Reverb({decay:2.5, wet:0.35}).toDestination();
+    await this._reverb.ready;
+    this._master = new Tone.Channel({volume:-6}).connect(this._reverb);
+
+    const make = (type) => {
+      const ch = new Tone.Channel({volume:0}).connect(this._master);
+      let synth;
+      if (type === 'metal') {
+        synth = new Tone.FMSynth({
+          harmonicity:3.5, modulationIndex:10,
+          envelope:           {attack:0.002,decay:0.3, sustain:0,  release:0.4},
+          modulationEnvelope: {attack:0.002,decay:0.1, sustain:0.2,release:0.2},
+          modulation:{type:'square'},
+        });
+        synth.connect(ch);
+      } else if (type === 'glass') {
+        synth = new Tone.Synth({oscillator:{type:'sine'},
+          envelope:{attack:0.001,decay:1.2,sustain:0,release:1.5}});
+        const hi = new Tone.Filter(2800,'highpass');
+        synth.connect(hi); hi.connect(ch);
+      } else if (type === 'wood') {
+        synth = new Tone.MembraneSynth({pitchDecay:0.05,octaves:4,
+          envelope:{attack:0.001,decay:0.15,sustain:0,release:0.2}});
+        synth.connect(ch);
+      } else if (type === 'lotus') {
+        synth = new Tone.Synth({oscillator:{type:'sine'},
+          envelope:{attack:0.01,decay:0.8,sustain:0.1,release:1.2}});
+        const lo = new Tone.Filter(600,'lowpass');
+        synth.connect(lo); lo.connect(ch);
+      } else { // stone
+        synth = new Tone.NoiseSynth({noise:{type:'brown'},
+          envelope:{attack:0.001,decay:0.15,sustain:0,release:0.1}});
+        synth.connect(ch);
+      }
+      this._synths[type] = synth;
+      this._chans[type]  = ch;
+    };
+
+    for (const t of Object.keys(MAT)) make(t);
+    this.ready = true;
+    console.log('[Audio] ready');
+  }
+
+  trigger(type, yNorm, vel=0.8, time) {
+    if (!this.ready) return;
+    const synth = this._synths[type];
+    if (!synth) return;
+    const freq = yToFreq(yNorm, MAT[type].pitchRange);
+    const t = time ?? Tone.now();
+    if (type === 'stone') synth.triggerAttackRelease('8n', t);
+    else                  synth.triggerAttackRelease(freq, '8n', t, vel);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// Surface
+// ══════════════════════════════════════════════════════════
+let _surfId = 1;
+class Surface {
+  constructor(type, position) {
+    this.id           = _surfId++;
+    this.type         = type;
+    this.hitCount     = 0;
+    this.isLocked     = false;
+    this.isSelected   = false;
+    this.pattern      = Array.from({length:STEPS}, ()=>({active:false,yNorm:0.5,vel:0.8}));
+    this._flashTimer  = 0;
+    this._onFlash     = null;
+
+    const cfg = MAT[type];
+    const mat = new THREE.MeshStandardMaterial({
+      color:cfg.color, emissive:cfg.emissive, emissiveIntensity:0.08,
+      roughness:cfg.rough, metalness:cfg.metal,
+      transparent:!!cfg.transparent, opacity:cfg.transparent?0.55:1,
+    });
+    this.mesh = new THREE.Mesh(new THREE.BoxGeometry(3, 0.08, 2), mat);
+    this.mesh.position.copy(position);
+    this.mesh.castShadow = this.mesh.receiveShadow = true;
+    this.mesh.userData.surf = this;
+
+    this._outline = new THREE.Mesh(
+      new THREE.BoxGeometry(3.06,0.14,2.06),
+      new THREE.MeshBasicMaterial({color:0x4fc3f7, wireframe:true, visible:false})
+    );
+    this.mesh.add(this._outline);
+  }
+
+  getBounds() {
+    const p = this.mesh.position;
+    return {minX:p.x-1.5, maxX:p.x+1.5, minY:p.y-0.04, maxY:p.y+0.04, minZ:p.z-1, maxZ:p.z+1};
+  }
+
+  contains(px, pz) {
+    const b = this.getBounds();
+    return px>=b.minX && px<=b.maxX && pz>=b.minZ && pz<=b.maxZ;
+  }
+
+  xToY(px) {
+    const b = this.getBounds();
+    return Math.max(0, Math.min(1, (px - b.minX) / (b.maxX - b.minX)));
+  }
+
+  activate(step, yNorm, vel) {
+    if (this.isLocked) return;
+    Object.assign(this.pattern[step], {active:true, yNorm, vel});
+  }
+
+  clearPattern() { this.pattern.forEach(s=>{s.active=false;}); }
+
+  get activeCount() { return this.pattern.filter(s=>s.active).length; }
+
+  select()   { this.isSelected=true;  this._outline.material.visible=true; }
+  deselect() { this.isSelected=false; this._outline.material.visible=false; }
+
+  flash() {
+    this.mesh.material.emissiveIntensity = 2.0;
+    this._flashTimer = 150;
+    if (this._onFlash) this._onFlash(this);
+  }
+
+  update(dms) {
+    if (this._flashTimer > 0) {
+      this._flashTimer = Math.max(0, this._flashTimer - dms);
+      this.mesh.material.emissiveIntensity = 0.08 + (this._flashTimer/150)*1.92;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// Sequencer
+// ══════════════════════════════════════════════════════════
+class Sequencer {
+  constructor(audio) {
+    this._audio    = audio;
+    this._surfaces = [];
+    this._seq      = null;
+    this._running  = false;
+    this._step     = 0;
+    this._loops    = 0;
+    this.onStep    = null;
+    this.onLoop    = null;
+  }
+
+  init(bpm) {
+    const T = Tone.getTransport();
+    T.bpm.value = bpm;
+    T.loop      = true;
+    T.loopStart = 0;
+    T.loopEnd   = '1m';
+
+    this._seq = new Tone.Sequence((time, step) => {
+      this._step = step;
+      if (step === 0) { this._loops++; if (this.onLoop) this.onLoop(this._loops); }
+      for (const s of this._surfaces) {
+        const p = s.pattern[step];
+        if (p && p.active) {
+          this._audio.trigger(s.type, p.yNorm, p.vel, time);
+          // visual flash: schedule via setTimeout offset
+          const delay = Math.max(0, (time - Tone.now())*1000 - 10);
+          setTimeout(()=>s.flash(), delay);
+        }
+      }
+      if (this.onStep) this.onStep(step);
+    }, [...Array(STEPS).keys()], '16n');
+  }
+
+  setBpm(v) { Tone.getTransport().bpm.value = v; }
+
+  start() {
+    if (this._running) return;
+    this._seq.start(0);
+    Tone.getTransport().start();
+    this._running = true;
+  }
+
+  stop() {
+    if (!this._running) return;
+    Tone.getTransport().stop();
+    this._seq.stop();
+    this._running = false;
+    this._step = 0;
+    this._loops = 0;
+  }
+
+  get step()    { return this._step; }
+  get running() { return this._running; }
+
+  recordHit(surface, yNorm, vel) {
+    this._audio.trigger(surface.type, yNorm, vel);
+    surface.flash();
+    surface.hitCount++;
+    if (this._running) {
+      const T = Tone.getTransport();
+      const stepLen = T.PPQ / 4;
+      const barLen  = stepLen * STEPS;
+      const step    = Math.round((T.ticks % barLen) / stepLen) % STEPS;
+      surface.activate(step, yNorm, vel);
+    }
+  }
+
+  add(s)    { if (!this._surfaces.includes(s)) this._surfaces.push(s); }
+  remove(s) { const i=this._surfaces.indexOf(s); if(i!==-1) this._surfaces.splice(i,1); }
+}
+
+// ══════════════════════════════════════════════════════════
+// RainSystem
+// ══════════════════════════════════════════════════════════
+const WEATHER = {
+  drizzle: {count:40,  speed:[2,  3.5], spread:6,  len:0.18, opacity:0.5},
+  rain:    {count:120, speed:[4,  7],   spread:10, len:0.28, opacity:0.7},
+  storm:   {count:300, speed:[8, 14],   spread:16, len:0.45, opacity:0.9},
+};
+
+class RainSystem {
+  constructor(scene, onHit) {
+    this._scene    = scene;
+    this._onHit    = onHit;
+    this._surfaces = [];
+    this._running  = false;
+    this._preset   = {...WEATHER.rain};
+    this._intensity = 4;
+    this._accum    = 0;
+    this._N        = 300;
+
+    // Flat typed arrays for the drop pool
+    this._alive = new Uint8Array(this._N);
+    this._px    = new Float32Array(this._N);
+    this._py    = new Float32Array(this._N);
+    this._pz    = new Float32Array(this._N);
+    this._vy    = new Float32Array(this._N);
+
+    // Single LineSegments draw call for all drops
+    this._pos = new Float32Array(this._N * 6);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(this._pos, 3));
+    geo.setDrawRange(0, 0);
+    this._geo = geo;
+    this._lines = new THREE.LineSegments(geo,
+      new THREE.LineBasicMaterial({color:0x90caf9, transparent:true, opacity:0.7}));
+    this._lines.frustumCulled = false;
+    scene.add(this._lines);
+
+    // Splash pool
+    this._splashes = [];
+    this._initSplashes();
+  }
+
+  _initSplashes() {
+    const geo = new THREE.RingGeometry(0.02, 0.06, 8);
+    const mat = new THREE.MeshBasicMaterial({
+      color:0x90caf9, transparent:true, opacity:0.8, side:THREE.DoubleSide
+    });
+    for (let i=0;i<60;i++) {
+      const m = new THREE.Mesh(geo, mat.clone());
+      m.rotation.x = -Math.PI/2;
+      m.visible = false;
+      this._scene.add(m);
+      this._splashes.push({mesh:m, life:0, max:0.4});
+    }
+  }
+
+  start()  { this._running = true; }
+  stop()   { this._running = false; }
+
+  setWeather(t) {
+    if (WEATHER[t]) {
+      this._preset = {...WEATHER[t]};
+      this._lines.material.opacity = this._preset.opacity;
+    }
+  }
+
+  setIntensity(v) { this._intensity = Math.max(1,Math.min(10,v)); }
+
+  reg(s)   { this._surfaces.push(s); }
+  unreg(s) { const i=this._surfaces.indexOf(s); if(i!==-1) this._surfaces.splice(i,1); }
+
+  update(ds) {
+    if (!this._running) return;
+    const p = this._preset;
+
+    // Spawn
+    this._accum += (p.count * this._intensity / 5) * ds;
+    while (this._accum >= 1) { this._spawn(); this._accum -= 1; }
+
+    // Move + collide
+    for (let i=0;i<this._N;i++) {
+      if (!this._alive[i]) continue;
+      this._py[i] -= this._vy[i] * ds;
+
+      // Surface collision
+      let hit = false;
+      for (const surf of this._surfaces) {
+        const b = surf.getBounds();
+        if (this._py[i] <= b.maxY+0.5 && this._py[i] >= b.minY-0.1 &&
+            surf.contains(this._px[i], this._pz[i])) {
+          const yNorm = surf.xToY(this._px[i]);
+          const velN  = Math.min(1,(this._vy[i]-2)/12);
+          this._onHit(surf, this._px[i], this._pz[i], velN, yNorm);
+          this._splash(this._px[i], b.maxY+0.05, this._pz[i]);
+          hit = true; break;
+        }
+      }
+
+      // Kill if hit or below floor
+      if (hit || this._py[i] < -4) { this._kill(i); continue; }
+
+      // Write geometry
+      const b = i*6;
+      this._pos[b]   = this._px[i];
+      this._pos[b+1] = this._py[i];
+      this._pos[b+2] = this._pz[i];
+      this._pos[b+3] = this._px[i];
+      this._pos[b+4] = this._py[i] - p.len;
+      this._pos[b+5] = this._pz[i];
+    }
+
+    this._geo.attributes.position.needsUpdate = true;
+    this._geo.setDrawRange(0, this._N*2);
+
+    // Splashes
+    for (const s of this._splashes) {
+      if (s.life <= 0) continue;
+      s.life -= ds;
+      const t = 1 - s.life/s.max;
+      s.mesh.scale.setScalar(1 + t*3);
+      s.mesh.material.opacity = 0.8*(1-t);
+      if (s.life <= 0) s.mesh.visible = false;
+    }
+  }
+
+  _spawn() {
+    for (let i=0;i<this._N;i++) {
+      if (this._alive[i]) continue;
+      const p = this._preset;
+      this._px[i]  = (Math.random()-.5)*p.spread*2;
+      this._py[i]  = 12 + Math.random()*2;
+      this._pz[i]  = (Math.random()-.5)*p.spread*2;
+      this._vy[i]  = p.speed[0] + Math.random()*(p.speed[1]-p.speed[0]);
+      this._alive[i] = 1;
+      return;
+    }
+  }
+
+  _kill(i) {
+    const b=i*6; for(let j=0;j<6;j++) this._pos[b+j]=0;
+    this._alive[i]=0;
+  }
+
+  _splash(x,y,z) {
+    for (const s of this._splashes) {
+      if (s.life>0) continue;
+      s.mesh.position.set(x,y,z);
+      s.mesh.scale.setScalar(1);
+      s.mesh.material.opacity=0.8;
+      s.mesh.visible=true;
+      s.life=s.max;
+      return;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// UIController
+// ══════════════════════════════════════════════════════════
+class UI {
+  constructor(cb) {
+    this._cb      = cb;
+    this._score   = 0;
+    this._unlocked= new Set();
+    this._gridRows= new Map();  // surfaceId → cell[]
+    this._surfs   = [];
+    this._selSurf = null;
+    this._toast   = null;
+  }
+
+  init() {
+    // BPM
+    const bpmSl = document.getElementById('bpm-slider');
+    bpmSl.addEventListener('input',()=>{
+      document.getElementById('bpm-val').textContent = bpmSl.value;
+      this._cb.onBpm(+bpmSl.value);
+    });
+
+    // Rain
+    const rainSl = document.getElementById('rain-slider');
+    rainSl.addEventListener('input',()=>{
+      document.getElementById('rain-val').textContent = rainSl.value;
+      this._cb.onRain(+rainSl.value);
+    });
+
+    // Play
+    const btnPlay = document.getElementById('btn-play');
+    btnPlay.addEventListener('click',()=>{
+      const on = btnPlay.classList.toggle('playing');
+      btnPlay.textContent = on ? '⏹ STOP' : '▶ START';
+      this._cb.onPlay();
+    });
+
+    // Clear
+    document.getElementById('btn-clear').addEventListener('click',()=>{
+      this._cb.onClear(); this.toast('Patterns cleared');
+    });
+
+    // Scale
+    document.getElementById('scale-sel').addEventListener('change',(e)=>{
+      this._cb.onScale(e.target.value); this.toast('Scale: '+e.target.value);
+    });
+
+    // Weather
+    document.getElementById('weather-sel').addEventListener('change',(e)=>{
+      this._cb.onWeather(e.target.value); this.toast('Weather: '+e.target.value);
+    });
+
+    // Palette
+    document.querySelectorAll('.mat-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if (btn.classList.contains('locked')) return;
+        document.querySelectorAll('.mat-btn').forEach(b=>b.classList.remove('sel'));
+        btn.classList.add('sel');
+        this._cb.onMat(btn.dataset.mat);
+      });
+    });
+
+    // Info panel buttons
+    document.getElementById('btn-lock').addEventListener('click',()=>{
+      if (!this._selSurf) return;
+      if (this._selSurf.isLocked) this._selSurf.isLocked=false;
+      else this._selSurf.isLocked=true;
+      document.getElementById('btn-lock').textContent =
+        this._selSurf.isLocked ? '🔓 Unlock' : '🔒 Lock Pattern';
+      this.toast(this._selSurf.isLocked ? 'Pattern locked' : 'Unlocked');
+    });
+
+    document.getElementById('btn-del').addEventListener('click',()=>{
+      if (this._selSurf) { this._cb.onDel(this._selSurf); this.hideInfo(); }
+    });
+
+    // Start button
+    document.getElementById('btn-begin').addEventListener('click',()=>{
+      document.getElementById('start-overlay').classList.add('hide');
+      this._cb.onStart();
+    });
+  }
+
+  // ── Sequencer grid ──────────────────────────────────────
+  addRow(surf) {
+    this._surfs.push(surf);
+    const grid = document.getElementById('seq-grid');
+    const row  = document.createElement('div');
+    row.className='seq-row';
+    row.dataset.id=surf.id;
+
+    const lbl = document.createElement('div');
+    lbl.className='seq-lbl';
+    lbl.textContent=surf.type.slice(0,5).toUpperCase();
+    row.appendChild(lbl);
+
+    const cells=[];
+    for (let s=0;s<STEPS;s++) {
+      const c=document.createElement('div');
+      c.className='seq-cell'+(s%4===0?' beat':'');
+      c.addEventListener('click',()=>{
+        const p=surf.pattern[s];
+        p.active=!p.active;
+        c.classList.toggle('on',p.active);
+      });
+      row.appendChild(c); cells.push(c);
+    }
+    grid.appendChild(row);
+    this._gridRows.set(surf.id, cells);
+    // Set up flash callback
+    surf._onFlash=(s)=>this.flashRow(s);
+  }
+
+  removeRow(surf) {
+    const i=this._surfs.indexOf(surf); if(i!==-1) this._surfs.splice(i,1);
+    const row=document.querySelector(`.seq-row[data-id="${surf.id}"]`);
+    if (row) row.remove();
+    this._gridRows.delete(surf.id);
+  }
+
+  flashRow(surf) {
+    const row=document.querySelector(`.seq-row[data-id="${surf.id}"]`);
+    if (!row) return;
+    row.style.background='rgba(79,195,247,.15)';
+    setTimeout(()=>{row.style.background='';},130);
+  }
+
+  syncGrid() {
+    for (const surf of this._surfs) {
+      const cells=this._gridRows.get(surf.id);
+      if (!cells) continue;
+      surf.pattern.forEach((p,i)=>cells[i].classList.toggle('on',p.active));
+    }
+  }
+
+  onStep(step) {
+    const prev=(step-1+STEPS)%STEPS;
+    document.querySelectorAll('.seq-cell:nth-child('+(prev+2)+')').forEach(c=>c.classList.remove('now'));
+    document.querySelectorAll('.seq-cell:nth-child('+(step+2)+')').forEach(c=>c.classList.add('now'));
+    document.getElementById('playhead').style.width=(step/STEPS*100)+'%';
+    this.syncGrid();
+  }
+
+  onLoop(n) {
+    document.getElementById('loop-count').textContent=n;
+    const density=this._surfs.reduce((a,s)=>a+s.activeCount,0)/(this._surfs.length*STEPS||1);
+    this.addScore(10+Math.round(density*40));
+  }
+
+  // ── Info panel ──────────────────────────────────────────
+  showInfo(surf) {
+    this._selSurf=surf;
+    const p=document.getElementById('info-panel');
+    p.classList.remove('hide');
+    document.getElementById('info-mat').textContent=surf.type.toUpperCase();
+    document.getElementById('info-hit-n').textContent=surf.hitCount;
+    document.getElementById('btn-lock').textContent=surf.isLocked?'🔓 Unlock':'🔒 Lock Pattern';
+  }
+
+  hideInfo() {
+    this._selSurf=null;
+    document.getElementById('info-panel').classList.add('hide');
+  }
+
+  updateInfo() {
+    if (this._selSurf)
+      document.getElementById('info-hit-n').textContent=this._selSurf.hitCount;
+  }
+
+  // ── Score & unlocks ──────────────────────────────────────
+  addScore(n) {
+    this._score+=n;
+    document.getElementById('score-value').textContent=this._score;
+    this._checkUnlocks();
+  }
+
+  _checkUnlocks() {
+    for (const u of UNLOCKS) {
+      if (this._unlocked.has(u.id)) continue;
+      if (this._score >= u.score) {
+        this._unlocked.add(u.id);
+        if (u.type==='mat') {
+          const btn=document.getElementById('mat-'+u.id);
+          if (btn) { btn.classList.remove('locked'); btn.querySelector('.mat-hint').textContent=''; }
+        } else if (u.type==='scale') {
+          const o=document.querySelector(`#scale-sel option[value="${u.id}"]`);
+          if (o) o.disabled=false;
+        } else {
+          const o=document.querySelector(`#weather-sel option[value="${u.id}"]`);
+          if (o) o.disabled=false;
+        }
+        this._showAch(u.icon, u.label, `Unlocked at ${u.score} points`);
+      }
+    }
+  }
+
+  _showAch(icon, title, desc) {
+    const ov=document.getElementById('ach-overlay');
+    document.getElementById('ach-icon').textContent=icon;
+    document.getElementById('ach-title').textContent=title;
+    document.getElementById('ach-desc').textContent=desc;
+    ov.classList.remove('hide');
+    setTimeout(()=>ov.classList.add('hide'),3500);
+  }
+
+  // ── Toast ────────────────────────────────────────────────
+  toast(msg, ms=2500) {
+    const el=document.getElementById('toast');
+    clearTimeout(this._toast);
+    el.textContent=msg;
+    el.classList.remove('hide','fade');
+    this._toast=setTimeout(()=>{
+      el.classList.add('fade');
+      setTimeout(()=>el.classList.add('hide'),500);
+    }, ms);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// MAIN — scene setup + game loop
+// ══════════════════════════════════════════════════════════
+let renderer, camera, scene, ghost;
+let audio, seq, rain, ui;
+const surfaces    = [];
+let   selMat      = 'metal';
+let   selSurf     = null;
+let   isPlaying   = false;
+let   lastTime    = 0;
+
+const raycaster  = new THREE.Raycaster();
+const mouse      = new THREE.Vector2();
+const placePlane = new THREE.Plane(new THREE.Vector3(0,1,0), -SURFACE_Y);
+
+// Build everything
+(function init() {
+  // Renderer
+  renderer = new THREE.WebGLRenderer({canvas:document.getElementById('three-canvas'),antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.2;
+
+  // Scene
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x0a0e14);
+  scene.fog=new THREE.FogExp2(0x0a0e14,.055);
+
+  // Camera
+  camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,100);
+  camera.position.set(0,8,14);
+  camera.lookAt(0,0,0);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x334455,1.4));
+  const sun=new THREE.DirectionalLight(0x7fb8d8,2.5);
+  sun.position.set(5,12,8);
+  sun.castShadow=true; sun.shadow.mapSize.setScalar(1024);
+  Object.assign(sun.shadow.camera,{near:1,far:50,left:-15,right:15,top:15,bottom:-15});
+  scene.add(sun);
+  const fill=new THREE.PointLight(0x7c4dff,.9,22);
+  fill.position.set(-4,-2,2); scene.add(fill);
+
+  // Floor
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),
+    new THREE.MeshStandardMaterial({color:0x0d1520,roughness:.08,metalness:.5}));
+  floor.rotation.x=-Math.PI/2; floor.position.y=-.5; floor.receiveShadow=true;
+  scene.add(floor);
+  const grid=new THREE.GridHelper(20,20,0x1a2234,0x1a2234);
+  grid.position.y=-.49; scene.add(grid);
+
+  // Ghost
+  ghost=new THREE.Mesh(new THREE.BoxGeometry(3,.08,2),
+    new THREE.MeshStandardMaterial({color:0x4fc3f7,transparent:true,opacity:.22,depthWrite:false}));
+  ghost.visible=false; scene.add(ghost);
+
+  // Systems
+  audio = new AudioEngine();
+  seq   = new Sequencer(audio);
+  rain  = new RainSystem(scene, onHit);
+
+  ui = new UI({
+    onMat:    (t)=>{ selMat=t; },
+    onBpm:    (v)=>{ seq.setBpm(v); },
+    onRain:   (v)=>{ rain.setIntensity(v); },
+    onScale:  (n)=>{ currentScale=SCALES[n]||currentScale; },
+    onWeather:(n)=>{ rain.setWeather(n); },
+    onPlay:   ()=>{ togglePlay(); },
+    onClear:  ()=>{ clearAll(); },
+    onDel:    (s)=>{ delSurf(s); },
+    onStart:  ()=>{ startGame(); },
+  });
+  ui.init();
+  seq.onStep = (s)=>ui.onStep(s);
+  seq.onLoop = (n)=>ui.onLoop(n);
+
+  // Events
+  const cv=renderer.domElement;
+  cv.addEventListener('mousemove',onMouseMove);
+  cv.addEventListener('click',onClick);
+  cv.addEventListener('contextmenu',(e)=>{e.preventDefault();deselAll();});
+  window.addEventListener('resize',onResize);
+  window.addEventListener('keydown',onKey);
+
+  renderer.setAnimationLoop(tick);
+})();
+
+// ── Start game (needs user gesture for Web Audio) ─────────
+async function startGame() {
+  await audio.init();
+  seq.init(+document.getElementById('bpm-slider').value);
+  rain.setIntensity(+document.getElementById('rain-slider').value);
+  rain.start();
+  ui.toast('Click the ground to place surfaces — rain composes the music', 5000);
+}
+
+function togglePlay() {
+  if (!isPlaying) { isPlaying=true; seq.start(); }
+  else { isPlaying=false; seq.stop(); ui.syncGrid(); }
+}
+
+// ── Surfaces ──────────────────────────────────────────────
+function placeSurf(pos) {
+  if (surfaces.length>=MAX_SURFACES) { ui.toast('Max 8 surfaces'); return; }
+  deselAll();
+  const snap=new THREE.Vector3(Math.round(pos.x*2)/2, SURFACE_Y, Math.round(pos.z*2)/2);
+  const s=new Surface(selMat, snap);
+  scene.add(s.mesh);
+  surfaces.push(s);
+  seq.add(s);
+  rain.reg(s);
+  ui.addRow(s);
+  ui.addScore(25);
+  ui.toast(selMat.toUpperCase()+' placed');
+}
+
+function selSurface(s) {
+  if (selSurf && selSurf!==s) selSurf.deselect();
+  selSurf=s; s.select(); ui.showInfo(s);
+}
+
+function deselAll() {
+  if (selSurf) { selSurf.deselect(); selSurf=null; } ui.hideInfo();
+}
+
+function delSurf(s) {
+  scene.remove(s.mesh);
+  const i=surfaces.indexOf(s); if(i!==-1) surfaces.splice(i,1);
+  seq.remove(s); rain.unreg(s); ui.removeRow(s);
+  if (selSurf===s) { selSurf=null; ui.hideInfo(); }
+  ui.toast(s.type.toUpperCase()+' removed');
+}
+
+function clearAll() { [...surfaces].forEach(delSurf); }
+
+// ── Raindrop hit ──────────────────────────────────────────
+function onHit(surf, px, pz, velN, yNorm) {
+  if (!audio.ready) return;
+  seq.recordHit(surf, yNorm, 0.4+velN*0.6);
+  ui.addScore(1);
+  ui.updateInfo();
+}
+
+// ── Input ─────────────────────────────────────────────────
+function toNDC(e) {
+  const r=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1;
+  mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+}
+
+function hitSurfs() {
+  raycaster.setFromCamera(mouse,camera);
+  return raycaster.intersectObjects(surfaces.map(s=>s.mesh),false);
+}
+
+function groundPt() {
+  raycaster.setFromCamera(mouse,camera);
+  const p=new THREE.Vector3();
+  return raycaster.ray.intersectPlane(placePlane,p) ? p : null;
+}
+
+function clamp(v) {
+  v.x=Math.max(-SCENE_BOUNDS,Math.min(SCENE_BOUNDS,v.x));
+  v.z=Math.max(-SCENE_BOUNDS,Math.min(SCENE_BOUNDS,v.z));
+  return v;
+}
+
+function onMouseMove(e) {
+  toNDC(e);
+  const hits=hitSurfs();
+  if (hits.length) { ghost.visible=false; return; }
+  const p=groundPt();
+  if (p) {
+    clamp(p);
+    ghost.position.set(Math.round(p.x*2)/2, SURFACE_Y+.04, Math.round(p.z*2)/2);
+    ghost.visible=true;
+  }
+}
+
+function onClick(e) {
+  if (e.target!==renderer.domElement) return;
+  toNDC(e);
+  const hits=hitSurfs();
+  if (hits.length) {
+    const s=hits[0].object.userData.surf;
+    if (s) { selSurface(s); return; }
+  }
+  const p=groundPt();
+  if (p) placeSurf(clamp(p));
+}
+
+function onKey(e) {
+  if (e.key==='Delete'||e.key==='Backspace') { if(selSurf) delSurf(selSurf); }
+  if (e.key==='Escape') deselAll();
+}
+
+function onResize() {
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+}
+
+// ── Render loop ───────────────────────────────────────────
+function tick(time) {
+  const now=time??performance.now();
+  const ds=Math.min((now-lastTime)/1000,.1);
+  lastTime=now;
+  surfaces.forEach(s=>s.update(ds*1000));
+  rain.update(ds);
+  renderer.render(scene,camera);
+}
+</script>
 </body>
 </html>
