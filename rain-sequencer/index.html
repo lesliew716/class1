@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rain Sequencer — Interactive Audiovisual</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ─── HUD Overlay ─────────────────────────────────── -->
+  <div id="hud">
+
+    <!-- Top bar -->
+    <div id="top-bar">
+      <div id="logo">☁ RAIN SEQUENCER</div>
+
+      <div id="controls-center">
+        <label>BPM
+          <input type="range" id="bpm-slider" min="60" max="180" value="90" />
+          <span id="bpm-display">90</span>
+        </label>
+        <label>RAIN
+          <input type="range" id="rain-slider" min="1" max="10" value="4" />
+          <span id="rain-display">4</span>
+        </label>
+      </div>
+
+      <div id="controls-right">
+        <button id="btn-play">▶ START</button>
+        <button id="btn-clear">✕ CLEAR</button>
+        <div id="score-box">SCORE <span id="score-value">0</span></div>
+      </div>
+    </div>
+
+    <!-- Material palette (left sidebar) -->
+    <div id="palette">
+      <div class="palette-title">SURFACES</div>
+
+      <div class="mat-btn" data-material="metal">
+        <div class="mat-icon metal-icon"></div>
+        <div class="mat-label">METAL</div>
+        <div class="mat-hint">FM · bright</div>
+      </div>
+
+      <div class="mat-btn" data-material="glass">
+        <div class="mat-icon glass-icon"></div>
+        <div class="mat-label">GLASS</div>
+        <div class="mat-hint">Bell · airy</div>
+      </div>
+
+      <div class="mat-btn" data-material="wood">
+        <div class="mat-icon wood-icon"></div>
+        <div class="mat-label">WOOD</div>
+        <div class="mat-hint">Marimba · warm</div>
+      </div>
+
+      <div class="mat-btn locked" data-material="lotus" id="mat-lotus">
+        <div class="mat-icon lotus-icon"></div>
+        <div class="mat-label">LOTUS</div>
+        <div class="mat-hint">🔒 Score 200</div>
+      </div>
+
+      <div class="mat-btn locked" data-material="stone" id="mat-stone">
+        <div class="mat-icon stone-icon"></div>
+        <div class="mat-label">STONE</div>
+        <div class="mat-hint">🔒 Score 500</div>
+      </div>
+
+      <div class="palette-divider"></div>
+      <div class="palette-title">SCALE</div>
+      <select id="scale-select">
+        <option value="pentatonic">Pentatonic</option>
+        <option value="major">Major</option>
+        <option value="minor">Minor</option>
+        <option value="blues">Blues</option>
+      </select>
+
+      <div class="palette-divider"></div>
+      <div class="palette-title">WEATHER</div>
+      <select id="weather-select">
+        <option value="rain">Rain</option>
+        <option value="drizzle" disabled>Drizzle 🔒</option>
+        <option value="storm" disabled>Storm 🔒</option>
+      </select>
+    </div>
+
+    <!-- Sequencer grid (bottom) -->
+    <div id="sequencer-panel">
+      <div id="seq-header">
+        <span>SEQUENCER — 16 STEPS</span>
+        <span id="loop-indicator">LOOP: <span id="loop-count">0</span></span>
+      </div>
+      <div id="seq-grid">
+        <!-- Populated dynamically by UIController -->
+      </div>
+      <div id="playhead-bar">
+        <div id="playhead"></div>
+      </div>
+    </div>
+
+    <!-- Surface info panel (appears on selection) -->
+    <div id="surface-info" class="hidden">
+      <div id="info-title">SURFACE INFO</div>
+      <div id="info-material"></div>
+      <div id="info-hits">Hits: <span id="info-hit-count">0</span></div>
+      <button id="btn-lock-pattern">🔒 Lock Pattern</button>
+      <button id="btn-delete-surface">✕ Delete</button>
+    </div>
+
+    <!-- Notification toast -->
+    <div id="toast" class="hidden"></div>
+
+    <!-- Progress / achievement overlay -->
+    <div id="achievement-overlay" class="hidden">
+      <div id="achievement-box">
+        <div id="achievement-icon">🏆</div>
+        <div id="achievement-title"></div>
+        <div id="achievement-desc"></div>
+      </div>
+    </div>
+
+    <!-- Click-to-start overlay -->
+    <div id="start-overlay">
+      <div id="start-box">
+        <h1>☁ RAIN SEQUENCER</h1>
+        <p>Place surfaces into the rain.<br/>Let the drops compose the music.</p>
+        <button id="btn-start-game">CLICK TO BEGIN</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Three.js canvas fills the background -->
+  <canvas id="three-canvas"></canvas>
+
+  <!-- ES module entry point -->
+  <script type="module" src="src/Main.js"></script>
+</body>
+</html>
