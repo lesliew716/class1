@@ -422,6 +422,20 @@ button:hover { background: var(--surface2); border-color: var(--accent); color: 
   color: var(--bg);
 }
 
+.start-tips {
+  list-style: none;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  line-height: 2;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  margin: 0;
+}
+.start-tips li::before { content: '› '; color: var(--accent); }
+
 /* ── Cursor modes ────────────────────────────── */
 body.mode-place  #three-canvas { cursor: cell; }
 body.mode-select #three-canvas { cursor: default; }

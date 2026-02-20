@@ -3,8 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rain Sequencer — Interactive Audiovisual</title>
+  <title>Rain Sequencer</title>
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- Import map: resolve bare specifiers to CDN URLs.
+       Must appear before any type="module" scripts. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.165/build/three.module.js",
+      "tone":  "https://cdn.jsdelivr.net/npm/tone@15/+esm"
+    }
+  }
+  </script>
 </head>
 <body>
 
@@ -37,7 +48,7 @@
     <div id="palette">
       <div class="palette-title">SURFACES</div>
 
-      <div class="mat-btn" data-material="metal">
+      <div class="mat-btn selected" data-material="metal">
         <div class="mat-icon metal-icon"></div>
         <div class="mat-label">METAL</div>
         <div class="mat-hint">FM · bright</div>
@@ -52,19 +63,19 @@
       <div class="mat-btn" data-material="wood">
         <div class="mat-icon wood-icon"></div>
         <div class="mat-label">WOOD</div>
-        <div class="mat-hint">Marimba · warm</div>
+        <div class="mat-hint">Membrane · warm</div>
       </div>
 
       <div class="mat-btn locked" data-material="lotus" id="mat-lotus">
         <div class="mat-icon lotus-icon"></div>
         <div class="mat-label">LOTUS</div>
-        <div class="mat-hint">🔒 Score 200</div>
+        <div class="mat-hint">🔒 200 pts</div>
       </div>
 
       <div class="mat-btn locked" data-material="stone" id="mat-stone">
         <div class="mat-icon stone-icon"></div>
         <div class="mat-label">STONE</div>
-        <div class="mat-hint">🔒 Score 500</div>
+        <div class="mat-hint">🔒 500 pts</div>
       </div>
 
       <div class="palette-divider"></div>
@@ -81,7 +92,7 @@
       <select id="weather-select">
         <option value="rain">Rain</option>
         <option value="drizzle" disabled>Drizzle 🔒</option>
-        <option value="storm" disabled>Storm 🔒</option>
+        <option value="storm"   disabled>Storm 🔒</option>
       </select>
     </div>
 
@@ -91,27 +102,23 @@
         <span>SEQUENCER — 16 STEPS</span>
         <span id="loop-indicator">LOOP: <span id="loop-count">0</span></span>
       </div>
-      <div id="seq-grid">
-        <!-- Populated dynamically by UIController -->
-      </div>
-      <div id="playhead-bar">
-        <div id="playhead"></div>
-      </div>
+      <div id="seq-grid"></div>
+      <div id="playhead-bar"><div id="playhead"></div></div>
     </div>
 
     <!-- Surface info panel (appears on selection) -->
     <div id="surface-info" class="hidden">
-      <div id="info-title">SURFACE INFO</div>
+      <div id="info-title">SURFACE</div>
       <div id="info-material"></div>
       <div id="info-hits">Hits: <span id="info-hit-count">0</span></div>
       <button id="btn-lock-pattern">🔒 Lock Pattern</button>
       <button id="btn-delete-surface">✕ Delete</button>
     </div>
 
-    <!-- Notification toast -->
+    <!-- Toast notification -->
     <div id="toast" class="hidden"></div>
 
-    <!-- Progress / achievement overlay -->
+    <!-- Achievement overlay -->
     <div id="achievement-overlay" class="hidden">
       <div id="achievement-box">
         <div id="achievement-icon">🏆</div>
@@ -120,11 +127,17 @@
       </div>
     </div>
 
-    <!-- Click-to-start overlay -->
+    <!-- Start overlay (blocks until user clicks — required for Web Audio) -->
     <div id="start-overlay">
       <div id="start-box">
         <h1>☁ RAIN SEQUENCER</h1>
         <p>Place surfaces into the rain.<br/>Let the drops compose the music.</p>
+        <ul class="start-tips">
+          <li>Click the ground to place a surface</li>
+          <li>Click a surface to select / delete it</li>
+          <li>Press ▶ START to loop your pattern</li>
+          <li>Right-click or ESC to deselect</li>
+        </ul>
         <button id="btn-start-game">CLICK TO BEGIN</button>
       </div>
     </div>
@@ -134,7 +147,6 @@
   <!-- Three.js canvas fills the background -->
   <canvas id="three-canvas"></canvas>
 
-  <!-- ES module entry point -->
   <script type="module" src="src/Main.js"></script>
 </body>
 </html>
